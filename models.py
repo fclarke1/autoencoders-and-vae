@@ -41,34 +41,43 @@ class VaeFc(nn.Module):
     
     def encoder(self, x):
         x = torch.flatten(x, start_dim=1)
-        x = self.LeakyReLU(self.encoder_1(x))
-        x = self.LeakyReLU(self.encoder_2(x))
-        mean = self.encoder_mean(x)
-        logvar = self.encoder_logvar(x)
+        h = self.LeakyReLU(self.encoder_1(x))
+        h = self.LeakyReLU(self.encoder_2(h))
+        mean = self.encoder_mean(h)
+        logvar = self.encoder_logvar(h)
         return mean, logvar
 
 
     def decoder(self, mean, logvar):
-        q_shape = (mean.shape[0], mean.shape[1])
-        q = self.rng.normal(size=q_shape)
-        z = mean + torch.exp(logvar) * torch.Tensor(q)
+        device = mean.device
+        eps = torch.randn_like(mean).to(device)
+        z = mean + torch.exp(logvar) * torch.Tensor(eps)
         
-        y_hat = self.LeakyReLU(self.decoder_1(z))
-        y_hat = self.LeakyReLU(self.decoder_2(y_hat))
-        y_hat = torch.sigmoid(self.decoder_3(y_hat))
+        h = self.LeakyReLU(self.decoder_1(z))
+        h = self.LeakyReLU(self.decoder_2(h))
+        y_hat = torch.sigmoid(self.decoder_3(h))
         y_hat = torch.unflatten(y_hat, 1, (1, 28, 28))
         return y_hat
     
     
     def forward(self, x):
-        batch_size = x.shape[0]
         mean, logvar = self.encoder(x)
         y_hat = self.decoder(mean, logvar)
         return y_hat
     
     
+    def forward_train(self, x):
+        mean, logvar = self.encoder(x)
+        y_hat = self.decoder(mean, logvar)
+        return y_hat, mean, logvar
+    
+    
     def calculate_loss(self, y, y_hat, mean, logvar):
-        reproduction_loss = self.c * nn.functional.mse_loss(y, y_hat)
+        nb_items = y.shape[0]
+        reproduction_loss = nn.functional.binary_cross_entropy(y_hat, y, reduction='sum')
+        variational_loss = - 0.5 * (1 + logvar - mean**2 - logvar.exp()).sum()
+        loss = self.c * reproduction_loss + variational_loss
+        return loss / nb_items
         
         
         
