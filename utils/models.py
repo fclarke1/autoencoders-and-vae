@@ -63,21 +63,57 @@ class VaeFc(nn.Module):
     def forward(self, x):
         mean, logvar = self.encoder(x)
         y_hat = self.decoder(mean, logvar)
-        return y_hat
-    
-    
-    def forward_train(self, x):
-        mean, logvar = self.encoder(x)
-        y_hat = self.decoder(mean, logvar)
         return y_hat, mean, logvar
     
     
     def calculate_loss(self, y, y_hat, mean, logvar):
-        nb_items = y.shape[0]
         reproduction_loss = nn.functional.binary_cross_entropy(y_hat, y, reduction='sum')
         variational_loss = - 0.5 * (1 + logvar - mean**2 - logvar.exp()).sum()
         loss = self.c * reproduction_loss + variational_loss
-        return loss / nb_items
+        return loss
+    
+    
+class AutoencoderFc(nn.Module):
+    def __init__(self, hidden_dim, latent_dim):
+        super().__init__()
+        # c = 1/2k where k is the variance of the normal
+        self.LeakyReLU = nn.LeakyReLU()
+        
+        self.encoder_1 = nn.Linear(in_features=28*28, out_features=hidden_dim)
+        self.encoder_2 = nn.Linear(in_features=hidden_dim, out_features=hidden_dim)
+        self.encoder_z = nn.Linear(in_features=hidden_dim, out_features=latent_dim)
+        
+        self.decoder_1 = nn.Linear(in_features=latent_dim, out_features=hidden_dim)
+        self.decoder_2 = nn.Linear(in_features=hidden_dim, out_features=hidden_dim)
+        self.decoder_3 = nn.Linear(in_features=hidden_dim, out_features=28*28)
+    
+    
+    def encoder(self, x):
+        x = torch.flatten(x, start_dim=1)
+        h = self.LeakyReLU(self.encoder_1(x))
+        h = self.LeakyReLU(self.encoder_2(h))
+        z = self.encoder_z(h)
+        return z
+
+
+    def decoder(self, z):        
+        h = self.LeakyReLU(self.decoder_1(z))
+        h = self.LeakyReLU(self.decoder_2(h))
+        y_hat = torch.sigmoid(self.decoder_3(h))
+        y_hat = torch.unflatten(y_hat, 1, (1, 28, 28))
+        return y_hat
+    
+    
+    def forward(self, x):
+        z = self.encoder(x)
+        y_hat = self.decoder(z)
+        return y_hat
+    
+    
+    def calculate_loss(self, y, y_hat):
+        reproduction_loss = nn.functional.binary_cross_entropy(y_hat, y, reduction='sum')
+        loss = reproduction_loss
+        return loss
         
         
         
