@@ -1,6 +1,7 @@
 import argparse
 from utils import train, models, data_loader
 from pathlib import Path
+from torch.utils.tensorboard import SummaryWriter
 import torch
 
 
@@ -15,9 +16,10 @@ def train_models(args):
         print(f'**** Autoencoder Training ****')
         model_name = f'auto_e{args.epochs}'
         model_path = models_dir / model_name
+        writer = SummaryWriter(f'./logs/{model_name}')
         
         model = models.AutoencoderFc(hidden_dim=args.hidden_dim, latent_dim=args.latent_dim)
-        trainer = train.Train(model=model, epochs=args.epochs, train_loader=dataloader_train, validate_loader=dataloader_valid, use_cuda=args.use_cuda, is_autoencoder=True)
+        trainer = train.Train(model=model, epochs=args.epochs, train_loader=dataloader_train, validate_loader=dataloader_valid, writer=writer, use_cuda=args.use_cuda, is_autoencoder=True)
         trainer.train()
         torch.save(model.state_dict(), model_path)
     
@@ -27,9 +29,10 @@ def train_models(args):
             print(f'\n**** VAE Training (c={c}) ****')
             model_name = f'vae_c{c:.1f}_e{args.epochs}'
             model_path = models_dir / model_name
+            writer = SummaryWriter(f'./logs/{model_name}')
             
             model = models.VaeFc(hidden_dim=args.hidden_dim, latent_dim=args.latent_dim, c=c)
-            trainer = train.Train(model=model, epochs=args.epochs, train_loader=dataloader_train, validate_loader=dataloader_valid, use_cuda=args.use_cuda, is_autoencoder=True)
+            trainer = train.Train(model=model, epochs=args.epochs, train_loader=dataloader_train, validate_loader=dataloader_valid, writer=writer, use_cuda=args.use_cuda, is_autoencoder=True)
             trainer.train()
             torch.save(model.state_dict(), model_path)
 

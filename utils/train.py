@@ -1,14 +1,20 @@
 from torch.utils.data import DataLoader
 from torch import nn, optim
+from torch.utils.tensorboard import SummaryWriter
 import torch
 
 
 class Train:
     
-    def __init__(self, model:nn.Module, train_loader:DataLoader, validate_loader:DataLoader, loss_fn=nn.CrossEntropyLoss(), epochs:int=5, lr:float=10e-3, use_cuda=False, is_autoencoder=False):
-        self.device = torch.device('cuda:0') if torch.cuda.is_available() else torch.device('cpu')
+    def __init__(self, model:nn.Module, train_loader:DataLoader, validate_loader:DataLoader, writer:SummaryWriter, epochs:int=5, lr:float=10e-3, use_cuda=False, is_autoencoder=False):
+        try:
+            self.device = torch.device('cuda:0') if use_cuda else torch.device('cpu')
+        except:
+            print('ERROR: Cuda not available - using cpu instead')
+            self.device = torch.device('cpu')
         self.model = model.to(self.device)
         self.device = self.device
+        self.writer = writer
         self.train_loader = train_loader
         self.validate_loader = validate_loader
         self.epochs = epochs
@@ -43,6 +49,7 @@ class Train:
                 running_loss += loss.item()
                 nb_items += x.shape[0]
             print(f'  training loss:   {running_loss/nb_items:5.2f}')
+            self.writer.add_scalar('Loss/train', running_loss/nb_items, epoch)
             
             running_loss = 0
             nb_items = 0
@@ -61,3 +68,5 @@ class Train:
                     loss = self.model.calculate_loss(y, pred)
                 running_loss += loss.item()
             print(f'  validation loss: {running_loss/nb_items:5.2f}')
+            self.writer.add_scalar('Loss/valid', running_loss/nb_items, epoch)
+        self.writer.close()
