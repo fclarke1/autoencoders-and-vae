@@ -12,7 +12,7 @@ LATENT_DIM = 2  # visualising in 2d so only works when models are trained with 2
 IMAGE_SIZE = 1  # controls the image size when saved
 
 # image post-processing. Thresholds to create 3 different bands of pixel values {0, 0.7, 1}
-THRESH_LOW = 0.4
+THRESH_LOW = 0.55
 THRESH_HIGH = 0.6
 MID_PIXEL = 0.7
 
