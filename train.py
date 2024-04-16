@@ -5,7 +5,7 @@ from torch.utils.tensorboard import SummaryWriter
 import torch
 
 
-def train_models(args):
+def train_models(args:argparse.ArgumentParser):
     ''' Iterate through all models and train them with specified parameters
     '''
     # create directory if needed
@@ -71,5 +71,4 @@ if __name__ == "__main__":
     parser.add_argument("--latent_dim", type=int, default=2, help="latent dimension size of models, default=2")
     parser.add_argument("--batch_size", type=int, default=64, help="batch size for training models, default=64")
     args = parser.parse_args()
-    
     main(args)
